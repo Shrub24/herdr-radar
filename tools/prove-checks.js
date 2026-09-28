@@ -20,6 +20,23 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
+
+// Whether this machine can make a symlink at all: Windows allows it only to
+// an administrator or with Developer Mode on. Where it cannot, the symlink
+// test skips itself, so the shape that relies on it going red cannot be
+// caught there — expected, not a miss.
+const CAN_SYMLINK = (() => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'radar-prove-symlink-'));
+  try {
+    fs.symlinkSync(path.join(dir, 'target'), path.join(dir, 'link'));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+})();
 const { spawnSync } = require('node:child_process');
 
 const root = path.join(__dirname, '..');
@@ -420,6 +437,16 @@ const cases = [
     'return [...active, ...inactive].flatMap((group) => group.ids);',
     'return [...active, ...inactive.reverse()].flatMap((group) => group.ids);',
     'workspace order: inactive block flipped on every pass',
+  ],
+
+  // lib/toml-blocks.js — a symlinked config stays linked through a save.
+  [
+    'lib/toml-blocks.js',
+    '  const target = realTarget(file);',
+    '  const target = file;',
+    'write: a save replaces a symlinked config with a plain file',
+    CAN_SYMLINK,
+    'test/write-atomic.test.js',
   ],
 
   // lib/frame.js — a tab_key that moves on its own must be republished, or
