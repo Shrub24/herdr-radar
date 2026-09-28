@@ -425,6 +425,14 @@ const cases = [
     'test/foreign-tables.test.js',
   ],
 
+  // lib/state.js — a tab name that is only whitespace is no name (review).
+  [
+    'lib/state.js',
+    "return pick((tabName ?? '').trim(), title);",
+    "return pick(tabName ?? '', title);",
+    'rows: a blank tab name replaces the title with nothing',
+  ],
+
   // lib/workspace-order.js — the order must settle or it loops over IPC.
   [
     'lib/workspace-order.js',
@@ -476,6 +484,32 @@ const cases = [
     "subtle: '#7c7f93'",
     "subtle: '#e0e0e0'",
     'palette: light subtle ink under the contrast floor (#5 was 3.06:1 at best)',
+  ],
+
+  // lib/state.js, lib/config.js — row_label names the row as documented.
+  [
+    'lib/state.js',
+    '  if (!isNamedTab(tabName)) return titleRow(tabName, title);\n',
+    '',
+    'row_label: a tab-only row with an unnamed tab goes blank',
+  ],
+  [
+    'lib/state.js',
+    'return Boolean(tabName) && !/^\\d+$/.test(tabName);',
+    'return Boolean(tabName);',
+    'row_label: a numbered tab reads as its number instead of the title',
+  ],
+  [
+    'lib/state.js',
+    "function titleRow(_tabName, title) {\n  return { tabLabel: '', title };",
+    'function titleRow(tabName, title) {\n  return { tabLabel: tabName, title };',
+    'row_label: the tab name comes back in title mode',
+  ],
+  [
+    'lib/config.js',
+    "  if (raw.show_tab === true) return 'both';\n",
+    '',
+    'row_label: show_tab = true no longer reads as both',
   ],
 ];
 

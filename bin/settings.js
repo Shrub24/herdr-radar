@@ -136,7 +136,17 @@ const FIELDS = [
     fallback: false,
     help: 'Hang the other panes of a split screen off the first with a corner; off draws them as plain rows.',
   },
-  { key: 'show_tab', kind: 'bool', fallback: false, help: 'Show the tab number on the state line.' },
+  {
+    key: 'row_label',
+    kind: 'enum',
+    options: ['title', 'tab', 'both'],
+    fallback: 'title',
+    // A file from before this setting says `show_tab = true`, which renders
+    // as `both` (lib/config.js); the popup shows what renders, not the
+    // fallback.
+    legacy: (raw) => (raw.show_tab === true ? 'both' : undefined),
+    help: "What names an agent row: the session's title, its tab's name, or both.",
+  },
   {
     key: 'trim_group_prefix',
     kind: 'bool',
@@ -195,7 +205,7 @@ function currentValues(text) {
       continue;
     }
     const holder = field.table ? (raw[field.table] ?? {}) : raw;
-    values.set(field, holder[field.key]);
+    values.set(field, holder[field.key] ?? field.legacy?.(raw));
   }
   return values;
 }

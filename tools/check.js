@@ -466,6 +466,59 @@ if (unstable) {
   }
 }
 
+// row_label: each mode names the row as documented, and a tab-only row keeps
+// its title when the tab is unnamed or carries only Herdr's number.
+{
+  const { rowText } = require('../lib/state');
+  const cases = [
+    ['title', 'architect', { tabLabel: '', title: 'Architect::QA' }],
+    ['tab', 'architect', { tabLabel: '', title: 'architect' }],
+    ['both', 'architect', { tabLabel: 'architect', title: 'Architect::QA' }],
+    ['tab', '', { tabLabel: '', title: 'Architect::QA' }],
+    ['tab', '1', { tabLabel: '', title: 'Architect::QA' }],
+    // A name that is only whitespace, or a number wrapped in it, is no name.
+    ['tab', '   ', { tabLabel: '', title: 'Architect::QA' }],
+    ['tab', ' 12 ', { tabLabel: '', title: 'Architect::QA' }],
+    ['tab', ' qa ', { tabLabel: '', title: 'qa' }],
+  ];
+  for (const [mode, tab, expected] of cases) {
+    const got = rowText(mode, tab, 'Architect::QA');
+    if (JSON.stringify(got) !== JSON.stringify(expected)) {
+      problems.push(`rowText(${mode}, "${tab}"): ${JSON.stringify(got)}, expected ${JSON.stringify(expected)}`);
+    }
+  }
+}
+
+// row_label is read from the settings file, and a file from before it existed
+// keeps its meaning: show_tab = true reads as both, anything else as title.
+{
+  const os = require('node:os');
+  const { spawnSync } = require('node:child_process');
+  const readRowLabel = (toml) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'radar-config-'));
+    fs.writeFileSync(path.join(dir, 'config.toml'), toml);
+    const out = spawnSync(process.execPath, ['-e', "process.stdout.write(require('./lib/config').rowLabel)"], {
+      cwd: root,
+      env: { ...process.env, HERDR_PLUGIN_CONFIG_DIR: dir },
+      encoding: 'utf8',
+    });
+    fs.rmSync(dir, { recursive: true, force: true });
+    return out.stdout;
+  };
+  const cases = [
+    ['row_label = "tab"\nshow_tab = true\n', 'tab'],
+    ['show_tab = true\n', 'both'],
+    ['show_tab = false\n', 'title'],
+    ['row_label = "sideways"\n', 'title'],
+    ['', 'title'],
+  ];
+  for (const [toml, expected] of cases) {
+    const got = readRowLabel(toml);
+    if (got !== expected)
+      problems.push(`config: ${JSON.stringify(toml)} reads row_label as ${got}, expected ${expected}`);
+  }
+}
+
 // Liveness is asked of the endpoint, never of a pid file.
 //
 // `kill(pid, 0)` on the pid file only says that SOME process has the number,
