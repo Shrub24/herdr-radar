@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.20 — 2026-09-28
+
+- **`row_label` says what names a row.** `show_tab = true` put the tab's
+  name in front of the session title, and a tab named after the session it
+  runs — a common habit past a few tabs — read the same thing twice, the
+  second copy off the edge. `row_label` replaces it: `title` (the default)
+  is the session's own title, `tab` is the tab's name instead, `both` is
+  what `show_tab = true` did — and still reads as, without `row_label`. A
+  tab that was never named carries Herdr's number, so in `tab` mode it keeps
+  the title rather than reading as `1`.
+  [#26](https://github.com/hhdebb/herdr-radar/pull/26) by @sleistner.
+
 ## 1.3.19 — 2026-09-28
 
 - **A group's spacer no longer lands mid-group.** A pane's sort keys were
