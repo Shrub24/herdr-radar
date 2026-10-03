@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.21 — 2026-10-03
+
+- **Three more agents wear their own mark.** Kimchi (CAST AI's coding
+  agent) gets the chili from its site, in its published orange
+  ([#37](https://github.com/hhdebb/herdr-radar/pull/37) by @testy-cool).
+  Muse Code publishes no mark of its own and its site signs it with Meta's,
+  so that is the mark it wears here, in Meta blue
+  ([#38](https://github.com/hhdebb/herdr-radar/pull/38) by @stevmills).
+  Crush reports itself to Herdr as `crush` and now wears the pixel heart it
+  draws in its own source, in the heart's cheek pink
+  ([#36](https://github.com/hhdebb/herdr-radar/issues/36), asked for by
+  @unbegrenzt). The icon range is `U+E1A0–U+E1BA` now; a terminal mapped by
+  hand needs the new end.
+
 ## 1.3.20 — 2026-09-28
 
 - **`row_label` says what names a row.** `show_tab = true` put the tab's
