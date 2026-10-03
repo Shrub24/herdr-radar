@@ -172,6 +172,15 @@ stopped, then plain text out to two hours, after which the whole row dims — lo
 colour alone says which one: a mark that changed shape as it aged would have to be learned
 three times.
 
+A pane that was already open before this plugin started has no stamp of its own, so its last
+turn is recovered from the session's own record where the CLI keeps one — Claude's and Codex's
+transcripts, and for Kilo Code the session's own `time_updated` row in `~/.local/share/kilo/kilo.db`.
+That last one needs a Node whose built-in `node:sqlite` really opens a store read-only — 22.12
+or newer, 23.2 or newer on the 23 line; on an older runtime the pane reads as plain idle, which is
+the answer for an agent whose record cannot be followed. The store is opened read-only and only its own row is read: a
+store-wide timestamp is not used, because it would shade a stale pane fresh whenever a different
+Kilo pane happened to be busy.
+
 The Spaces column takes the same vendor colours, so a workspace running Claude and one running
 Gemini are told apart there too.
 
@@ -384,8 +393,9 @@ Windows); delete it by hand if you want nothing left.
 
 One resident daemon, woken by Herdr's event stream, takes a snapshot from `herdr agent list`
 each frame and writes only states, groups and sort keys as sidebar tokens. No network; outside
-Herdr's config and its own state directory it reads one thing, the tail of a session's own
-transcript, to give panes older than the plugin a last-activity time. Like every Herdr plugin
+Herdr's config and its own state directory it reads one thing, a session's own record — the
+tail of its transcript, or for Kilo Code its row in Kilo's store — to give panes older than the
+plugin a last-activity time. Like every Herdr plugin
 it runs as your user and Herdr does not sandbox it — read `herdr-plugin.toml` and `bin/` before
 installing if that matters to you.
 

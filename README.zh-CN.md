@@ -312,7 +312,7 @@ herdr plugin uninstall hhdebb.herdr-radar
 ## 工作方式
 
 一个常驻守护进程，由 Herdr 的事件流唤醒，每帧从 `herdr agent list` 取快照，只把状态、
-分组、排序键写成侧边栏 token。无网络；Herdr 配置和自己的状态目录之外只读会话记录的尾巴，
+分组、排序键写成侧边栏 token。无网络；Herdr 配置和自己的状态目录之外只读会话自己的记录（会话记录的尾巴，Kilo Code 则是它库里那一行），
 给比插件更老的面板补一个最后活跃时间。和所有 Herdr 插件一样以你的用户身份运行，Herdr
 不沙箱插件，在意的话装之前看一眼 `herdr-plugin.toml` 和 `bin/`。
 
