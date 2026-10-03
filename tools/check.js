@@ -565,6 +565,75 @@ for (const dir of ['lib', 'bin']) {
   }
 }
 
+// Nothing an install or a start does may write what the user owns.
+//
+// The managed blocks in Herdr's config.toml, the icon font in the user's font
+// directory and the codepoint maps in ghostty/kitty configs are written by the
+// commands that are asked for them (`configure`, `install-font`, `theme-sync`)
+// and by nothing else. Two shapes shipped the opposite, and both were
+// invisible: the build hook and the first daemon start wrote all three on
+// their own, and a daemon timer rewrote the managed blocks once a minute. A
+// configuration that is generated instead (Nix, Home Manager, a dotfiles repo)
+// either fails on a read-only target or drifts out of step when that happens,
+// so the write calls are matched here as call shapes rather than as one
+// spelling of a name.
+//
+// It has to be shapes: the first version of this guard listed strings such as
+// `managed.apply` and was blind to the same call written inline —
+// `require('./managed-config').apply()` — which is the shape
+// tools/prove-checks.js puts back to prove this guard. Three arrivals are read
+// for each owned module: the call on the `require` itself, a module bound to a
+// name (`const m = require('./managed-config'); m.apply()`), and a
+// destructured binding (`const { apply } = require('./managed-config');
+// apply()`). What is checked is still a bounded static read of five files, not
+// an effect system: a write reached through a value the file did not bind to a
+// require, or through a computed name, is outside what this claims. Behaviour
+// that has to be driven rather than read is in test/install-no-writes.test.js
+// and test/startup-no-writes.test.js.
+const OWNED_WRITES = [
+  { module: 'managed-config', methods: ['apply', 'remove', 'setSidebarRows', 'applyAppearance'] },
+  { module: 'font', methods: ['install', 'uninstall', 'configureTerminals', 'unconfigureTerminals'] },
+];
+// The module a require() request names: `./font`, `../lib/font` and
+// `./managed-config.js` all resolve by their last segment.
+const ownedBy = (request) => OWNED_WRITES.find((entry) => new RegExp(`(^|/)${entry.module}(\\.js)?$`).test(request));
+const BOUND_MODULE = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/g;
+const BOUND_PARTS = /(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/g;
+const GUARDED = ['bin/setup.js', 'lib/setup.js', 'bin/agent-state.js', 'lib/daemon.js', 'lib/frame.js'];
+for (const file of GUARDED) {
+  const text = fs.readFileSync(path.join(root, file), 'utf8');
+  const found = new Set();
+  for (const { module, methods } of OWNED_WRITES) {
+    const called = `(?:${methods.join('|')})\\s*\\(`;
+    // require('./managed-config').apply()
+    if (new RegExp(`require\\(\\s*['"][^'"]*${module}(\\.js)?['"]\\s*\\)\\s*\\.\\s*${called}`).test(text)) {
+      found.add(`require('${module}').…`);
+    }
+    // const managed = require('./managed-config'); managed.apply()
+    for (const [, alias, request] of text.matchAll(BOUND_MODULE)) {
+      if (ownedBy(request)?.module !== module) continue;
+      if (new RegExp(`\\b${alias}\\s*\\.\\s*${called}`).test(text)) found.add(`${alias}.…`);
+    }
+    // const { apply } = require('./managed-config'); apply()
+    // `{ apply: go }` renames the callable, so the property names the write and
+    // the local name is what is called.
+    for (const [, names, request] of text.matchAll(BOUND_PARTS)) {
+      if (ownedBy(request)?.module !== module) continue;
+      for (const raw of names.split(',')) {
+        const [property, renamed] = raw.split(':').map((part) => part.trim());
+        const calledName = renamed || property;
+        if (!methods.includes(property)) continue;
+        if (new RegExp(`(?<![\\w.$])${calledName}\\s*\\(`).test(text)) found.add(`${property}()`);
+      }
+    }
+  }
+  // The timer spawned this by name; nothing in an install or a start may.
+  if (text.includes('theme-sync.js')) found.add('theme-sync.js');
+  for (const name of found) {
+    problems.push(`${file}: ${name} writes what the user owns, and an install or a start may not`);
+  }
+}
+
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);

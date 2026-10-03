@@ -294,6 +294,45 @@ const cases = [
     'install: the build hook starts the daemon from the temp checkout (#23, shipped v1.0.0-v1.3.15)',
   ],
 
+  // Both install and startup write nothing of the user's: the managed blocks,
+  // the font and the terminal maps belong to the commands that are asked for
+  // them (tools/check.js OWNED_WRITES). The hook did all three on its
+  // own before, and the daemon's first start did them again.
+  [
+    'bin/setup.js',
+    'const status = setup.status();',
+    "const status = setup.status();\nrequire('../lib/managed-config').apply();",
+    'install: the build hook writes the managed blocks itself',
+    true,
+    'test/install-no-writes.test.js',
+  ],
+  [
+    'lib/daemon.js',
+    '  const frame = new Frame(src);',
+    "  const frame = new Frame(src);\n  require('./managed-config').apply();",
+    'startup: the daemon writes the managed blocks on every start',
+    true,
+    'test/startup-no-writes.test.js',
+  ],
+  [
+    'lib/setup.js',
+    'function status() {',
+    "function status() {\n  require('./managed-config').apply();",
+    'install: a read-only install path grows a config write',
+  ],
+  [
+    'lib/setup.js',
+    'function status() {',
+    "function status() {\n  const m = require('./managed-config');\n  m.apply();",
+    'install: the write arrives through a module bound to a name',
+  ],
+  [
+    'lib/setup.js',
+    'function status() {',
+    "function status() {\n  const { apply } = require('./managed-config');\n  apply();",
+    'install: the write arrives through a destructured binding',
+  ],
+
   // lib/control.js — a peer that hangs up without a word must still settle the
   // request. Without it, a launcher that had just ended a stalled daemon exited
   // 0 before starting the replacement.

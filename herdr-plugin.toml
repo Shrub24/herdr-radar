@@ -25,6 +25,17 @@ title = "Configure: install the sidebar, tab-bar and theme blocks"
 description = "Write (or repair) the three managed blocks in Herdr's config.toml and reload."
 command = ["node", "bin/configure.js", "--apply", "--reload"]
 
+# The blocks that carry colours are per-appearance, so a desktop that flips
+# light/dark needs this run once to be right again. It is the only thing that
+# rewrites them after the install — nothing does it on a timer. `--force` skips
+# the "did it flip?" question and applies the desktop's appearance once; with
+# `follow_appearance = false` the action does nothing at all without it.
+[[actions]]
+id = "theme-sync"
+title = "Theme: match this desktop's light/dark"
+description = "Rewrite the managed theme and sidebar blocks for the appearance the desktop is in now, and reload."
+command = ["node", "bin/theme-sync.js"]
+
 [[actions]]
 id = "install-font"
 title = "Font: install for this user and map codepoints in the terminal"
@@ -94,12 +105,15 @@ description = "Toggle the whole Agents panel — order and row colours — betwe
 command = ["node", "bin/agent-view.js", "--native"]
 
 # Runs when Herdr installs the plugin from GitHub (shown in the install
-# preview): writes the managed blocks and installs the icon font. It must
-# not start the daemon: the hook runs inside Herdr's temporary checkout,
-# which is renamed into place afterwards, and a process whose cwd is in
-# there blocks that rename on Windows (#23). The startup hooks below start
-# the daemon once the plugin is in place; a checkout linked with `plugin
-# link` gets the same setup from the daemon launcher on its first start.
+# preview): it names the actions that write the managed blocks and install the
+# icon font, and writes nothing itself. An install is not consent to edit
+# somebody's config.toml, their terminal config or their font directory — a
+# configuration that is generated instead (Nix, Home Manager, dotfiles) fails
+# or drifts when that happens. For the same reason it must not start the
+# daemon: the hook runs inside Herdr's temporary checkout, which is renamed
+# into place afterwards, and a process whose cwd is in there blocks that rename
+# on Windows (#23). The startup hooks below start the daemon once the plugin is
+# in place; a checkout linked with `plugin link` gets it from the same hooks.
 [[build]]
 command = ["node", "bin/setup.js"]
 
@@ -140,7 +154,19 @@ command = ["node", "bin/agent-view.js", "--reapply"]
 on = "pane.agent_detected"
 command = ["node", "bin/agent-state.js"]
 
-# Appearance follow-up now lives on a timer inside the resident daemon
-# (agent-state.js requires bin/theme-sync and calls sync() once a minute).
-# It used to ride on pane.focused / agent_status_changed event hooks — a node
-# spawn per event — because nothing else survived long enough to own a timer.
+# Only new workspaces, and only when [anchors] auto_create = true. Existing
+# sessions are deliberately left alone until the retrofit action is invoked.
+[[events]]
+on = "workspace.created"
+command = ["node", "bin/anchors.js", "--created"]
+
+[[actions]]
+id = "anchors-all"
+title = "Anchors: add missing workspace headings"
+description = "Create a background anchor tab in each workspace that has none. Existing panes and anchors are left alone."
+command = ["node", "bin/anchors.js", "--all"]
+
+# Appearance follow-up is an action now, not a timer: the daemon used to
+# spawn bin/theme-sync once a minute and rewrite the managed blocks on its own,
+# which is a background process editing Herdr's config. `theme-sync` above does
+# the same work when it is asked for.

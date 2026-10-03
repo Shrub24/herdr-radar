@@ -179,6 +179,20 @@ const FIELDS = [
     fallback: palette.chrome.dark.active_row_bg,
     help: "Selected-row fill for a dark theme. Empty = keep the theme's own.",
   },
+  {
+    key: 'auto_create',
+    table: 'anchors',
+    kind: 'bool',
+    fallback: false,
+    help: 'Create a background anchor tab for each NEW workspace. Existing workspaces require the anchors-all action.',
+  },
+  {
+    key: 'command',
+    table: 'anchors',
+    kind: 'text',
+    fallback: '',
+    help: 'Management command for newly created anchors (nvim, jjui, yazi). Empty = interactive shell; existing anchors are unchanged.',
+  },
 ];
 
 /* --------------------------------------------------------------- config */
@@ -226,7 +240,7 @@ async function applyView({ panelOn, panelChanged, order }) {
 
 // TOML text for a value: numbers bare, everything else double-quoted.
 function literal(value) {
-  return typeof value === 'number' || typeof value === 'boolean' ? String(value) : `"${value}"`;
+  return typeof value === 'number' || typeof value === 'boolean' ? String(value) : JSON.stringify(String(value));
 }
 
 function saveValues(text, values) {

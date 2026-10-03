@@ -13,10 +13,19 @@ require('../lib/node-version');
 //   node bin/configure.js --rows-on     install just the sidebar block
 //   node bin/configure.js --rows-off    remove just the sidebar block
 //   node bin/configure.js --keys        print a key-binding snippet to paste
+//   node bin/configure.js --print       print the managed blocks as one TOML
+//                                       document and write nothing; --blocks
+//                                       tabbar,theme,sidebar picks which; --variant
+//                                       light|dark pins the appearance
 //
 // Only the managed blocks are touched. Deliberately NOT managed:
 // tab_bar_position — where the tab row lives is the user's call, not this
 // plugin's — and key bindings, see --keys.
+//
+// `--print` is the declarative half: a configuration this plugin does not own
+// (Nix, Home Manager, a dotfiles repo) consumes the blocks instead of letting
+// an install edit the file behind it. It reads the config and spawns nothing,
+// so it works with Herdr not running.
 
 const managed = require('../lib/managed-config');
 const { stopAnimator } = require('../lib/stop');
@@ -52,8 +61,48 @@ function keybindings() {
   ].join('\n');
 }
 
+// The operation is whichever known mode flag is present, not the first argument
+// that starts with `--`. Resolved the other way, `configure --variant dark
+// --print` read `--variant` as the mode, fell through to the status report and
+// exited 0 without ever printing the document; `--reload` and `--force` could
+// swallow the mode the same way.
+const MODES = ['--apply', '--uninstall', '--rows-on', '--rows-off', '--keys', '--print', '--check'];
+
 async function main() {
-  const mode = process.argv.find((argument) => argument.startsWith('--')) ?? '--check';
+  const modes = MODES.filter((known) => process.argv.includes(known));
+  if (modes.length > 1) {
+    console.error('herdr: choose one operation');
+    process.exit(2);
+  }
+  const mode = modes[0] ?? '--check';
+
+  if (mode === '--print') {
+    const at = process.argv.indexOf('--variant');
+    const asked = at === -1 ? undefined : process.argv[at + 1];
+    if (at !== -1 && asked !== 'light' && asked !== 'dark') {
+      console.error('herdr: --variant takes light or dark');
+      process.exit(2);
+    }
+    // `--blocks tabbar,sidebar`: the document without the theme table, for a
+    // configuration that already has its own `[theme.custom]`. The names are
+    // checked by exportText, so a typo fails before any output; a missing
+    // value is a malformed command line, like a missing `--variant` value.
+    const from = process.argv.indexOf('--blocks');
+    const given = from === -1 ? undefined : process.argv[from + 1];
+    if (from !== -1 && (given === undefined || given.startsWith('--'))) {
+      console.error('herdr: --blocks takes tabbar, theme and sidebar, comma-separated');
+      process.exit(2);
+    }
+    const blocks = given === undefined ? undefined : given.split(',').filter((name) => name !== '');
+    const result = managed.exportText({ variant: asked, blocks });
+    if (!result.ok) {
+      console.error(result.message);
+      process.exit(1);
+    }
+    if (result.warning) console.error(result.warning);
+    process.stdout.write(result.text);
+    return;
+  }
   if (mode === '--rows-on' || mode === '--rows-off') {
     const result = managed.setSidebarRows(mode === '--rows-on');
     console.log(result.message);

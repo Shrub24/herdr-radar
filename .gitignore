@@ -11,3 +11,6 @@ node_modules/
 # What ships is the rendered result in assets/.
 tools/banner.html
 tools/sidebar.html
+
+# Local agent state
+.pi/

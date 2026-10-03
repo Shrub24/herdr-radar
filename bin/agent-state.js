@@ -27,13 +27,12 @@ const { stopAnimator } = require('../lib/stop');
 const { detachedNode } = require('../lib/spawn');
 
 async function spawnAnimator() {
-  // First start after an install: write the managed blocks, install the font.
-  // Idempotent and stamped, so this is a cheap check on every later start.
-  try {
-    for (const note of require('../lib/setup').ensure()) console.log(note);
-  } catch (error) {
-    console.error(`setup: ${error.message}`);
-  }
+  // Nothing is set up here, on purpose. A start is not consent to write
+  // Herdr's config.toml, a terminal's config or the user's font directory, and
+  // this used to do all three on the first start — and again after any release
+  // that shipped a new font. The writes live in the actions that are asked for
+  // them; lib/setup.js reports which of those a machine has not run.
+
   // Asked of the endpoint, not the pid file (lib/state.js daemonStatus). A
   // stalled daemon still holds the endpoint, so a fresh one could not bind
   // beside it: it has to go first.

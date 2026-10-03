@@ -5,17 +5,22 @@ require('../lib/node-version');
 
 // Keep the managed theme block in step with the desktop's appearance.
 //
-//   node bin/theme-sync.js           rewrite and reload only if it flipped
+//   node bin/theme-sync.js           rewrite and reload, if it flipped since
+//                                    this last ran
 //   node bin/theme-sync.js --force   rewrite and reload regardless
 //   node bin/theme-sync.js --check   print what it would do
 //
 // Herdr's `auto_switch` swaps the theme when the host goes light or dark, but
 // `[theme.custom]` is one static table — it cannot hold a value per
-// appearance. This closes that gap: Herdr swaps the theme, this swaps the
-// tokens we own.
+// appearance. This is how the tokens this plugin owns are swapped to match:
+// after a flip, run the `theme-sync` action (or this command by hand).
 //
-// The resident daemon spawns this once a minute (lib/daemon.js), so under
-// normal use nothing has to run it by hand.
+// Nothing runs it on its own any more. The resident daemon used to spawn it
+// once a minute, which meant a background process editing Herdr's config
+// without being asked — a configuration that is generated instead (Nix, Home
+// Manager, dotfiles) either fails on a read-only target or drifts out of step
+// when that happens. `follow_appearance` still decides whether this reads the
+// desktop at all: with it false, nothing short of `--force` does anything.
 
 const appearance = require('../lib/appearance');
 const config = require('../lib/config');
