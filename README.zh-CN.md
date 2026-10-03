@@ -39,8 +39,8 @@ herdr-radar 把这些信息搬到侧边栏上：完工的勾一直亮到你看�
   idle 按最后一轮距今多久分三档，放弃的会话整行变暗。
 - **列表有结构。** 工作区有表头，git worktree 挂在它的仓库下面成树，同一块分屏的面板挨在
   一起，最忙的项目排最前，Spaces 那一栏跟着状态着色。
-- **周边跟着配套。** 标签栏显示当前目录，桌面明暗翻转时 Herdr 主题跟着切，
-  一个设置弹窗管所有选项。
+- **周边跟着配套。** 标签栏显示当前目录，跑一次 `theme-sync` 动作就按桌面明暗重新生成主题
+  托管块，一个设置弹窗管所有选项。
 
 ## 快速开始
 
@@ -48,9 +48,27 @@ herdr-radar 把这些信息搬到侧边栏上：完工的勾一直亮到你看�
 herdr plugin install hhdebb/herdr-radar
 ```
 
-就这一句。插件第一次启动时自己完成剩下的事：把三个托管块写进 Herdr 的 `config.toml`
-（用标记注释圈定，标记之外不碰），把图标字体装进你的用户字体目录（不需要管理员权限），
-Ghostty / kitty 的配置存在的话写入码位映射。
+就这一句，而且它不会动你任何配置：插件自己不会去写 Herdr 的 `config.toml`、终端配置或字体
+目录。要写入是靠下面两个动作，你想跑的时候再跑（之后修好、重做也是它们）：
+
+```sh
+herdr plugin action invoke hhdebb.herdr-radar.install-font   # 图标字体和码位映射
+herdr plugin action invoke hhdebb.herdr-radar.configure      # 写 Herdr config.toml 里的托管块
+```
+
+请按这个顺序跑：侧边栏块按“能看到的字体”生成字形表，所以先跑 `configure` 再装字体会写成
+Unicode 行；已经这样跑过的话，装完字体后再跑一次 `configure`。
+
+`configure` 往 `config.toml` 里写三个块（用标记注释圈定，标记之外不碰）。`install-font`
+把字体装进你的用户字体目录（不需要管理员权限），Ghostty / kitty 的配置存在的话写入码位
+映射。另一个可选的 `theme-sync`，在你翻转桌面明暗之后重新生成带颜色的那两个块。
+
+配置是「生成」出来的（Nix、Home Manager、dotfiles 仓库）时，`node bin/configure.js --print`
+把同样的块输出成一份完整的 TOML 文档：不写任何文件，也不问 Herdr 和桌面任何东西，Herdr
+没跑也能用。不加 `--variant` 时，明暗取自目标配置里的 `[theme] name`，字形表取自插件自己的
+`variant` 设置。只有标签栏那一条是刻意跟机器绑定的——它是一条读本插件状态文件的命令，所以
+文档里带着选定的绝对路径（以及适合当前平台的 `cat` / `type`）；同一台机器上多次生成内容相同，
+不同机器之间不会逐字节相同。
 
 > [!IMPORTANT]
 > 插件由 Herdr 服务端在启动时拉起，装完侧边栏还没变化，就手动起一次：
@@ -86,7 +104,7 @@ herdr plugin link ./herdr-radar
 herdr plugin action invoke hhdebb.herdr-radar.state-start
 ```
 
-`plugin link` 不跑构建步骤，同样的初始化由守护进程首次启动时完成，第三行就是为此。
+`plugin link` 不跑构建步骤；第三行是启动守护进程，托管块和字体则由上面两个动作来写（想跑再跑）。
 
 ### 或者交给 agent 装
 
@@ -97,13 +115,19 @@ herdr plugin action invoke hhdebb.herdr-radar.state-start
 
 1. herdr plugin install hhdebb/herdr-radar
 2. herdr plugin action invoke hhdebb.herdr-radar.state-start
-3. 确认装上了：`herdr plugin list` 里 hhdebb.herdr-radar 是 enabled，
+3. herdr plugin action invoke hhdebb.herdr-radar.install-font
+4. herdr plugin action invoke hhdebb.herdr-radar.configure
+5. 确认装上了：`herdr plugin list` 里 hhdebb.herdr-radar 是 enabled，
    并且 `herdr agent list` 里跑着 agent 的面板带上了 `sort_key` token
    （这个 token 与状态无关一直都在；徽标那个 token 的名字会随状态变）。
 
 不要执行 `herdr server stop`，也不要杀 Herdr 进程。那会结束所有面板里的
-所有程序，包括正在跑你的那个。这里没有任何一步需要重启：插件首次启动会自己
-完成配置，新开的终端窗口会自己认到图标字体。
+所有程序，包括正在跑你的那个。这里没有任何一步需要重启。安装本身不写任何
+配置：第 3 步把图标字体装进用户字体目录，第 4 步才把托管块写进 Herdr 的
+`config.toml`，新开的终端窗口会自己认到图标字体。顺序别换：侧边栏块按“能
+看到的字体”生成字形表，先跑了 `configure` 的话，装完字体要再跑一次。配置是
+生成出来的（Nix、Home Manager、dotfiles）就跳过 3、4，改用
+`node bin/configure.js --print` 拿块。
 
 需要 Herdr 0.9.0 以上和 Node 18 以上。如果标记显示成方框，是这个终端没有
 对应的码位映射 —— 这种情况和其余问题都在 https://github.com/hhdebb/herdr-radar
@@ -216,7 +240,7 @@ exec claude "$@"
 | `row_label` | `title` | 行显示什么：`title` 会话标题、`tab` tab 名、`both` 两者都显示（原 `show_tab = true`） |
 | `trim_group_prefix` | `true` | 标题开头与分组表头同名时去掉那一截 |
 | `worktree_mark` | `U+F418` | worktree 表头的标记，需要 Nerd Font；置空不画 |
-| `follow_appearance` | `true` | 跟随桌面明暗切换 Herdr 主题 |
+| `follow_appearance` | `true` | 开启时，跑 `configure` / `theme-sync` 就按桌面明暗生成主题块；关闭时 `configure` 跟随配置自己的 `[theme] name`，`theme-sync` 不带 `--force` 就什么都不做 |
 | `colors.active_row_bg_light` | `#b9cdf2` | 浅色主题的选中行底色；置空用主题自己的 |
 | `colors.active_row_bg_dark` | `#414868` | 深色主题的选中行底色 |
 
@@ -253,7 +277,8 @@ Ghostty 上只有 `ghostty +show-face` 能说明映射到底生没生效，`+sho
 <summary><b>装完侧边栏一点变化都没有</b></summary>
 
 守护进程没起来，`herdr plugin action invoke hhdebb.herdr-radar.state-start`。还不行就看
-插件日志里这条的输出。最常见的原因：Herdr 看到的 PATH 上没有 Node 18+，
+插件日志里这条的输出。最常见的原因：还没跑过 `configure` 动作（安装不会往 `config.toml`
+写任何东西），Herdr 看到的 PATH 上没有 Node 18+，
 `config.toml` 里没有 `[ui]` 表让托管块落脚，或者你自己手写过 `[theme.custom]` / `[ui.sidebar.*]`
 表：插件会拒绝写入而不是让同一个表出现两次（那会让整个配置文件失效）。把你的挪开，或者留着它、
 用 Herdr 原生面板。
@@ -263,7 +288,7 @@ Ghostty 上只有 `ghostty +show-face` 能说明映射到底生没生效，`+sho
 <summary><b>改了配置没生效</b></summary>
 
 守护进程只在启动时读配置。设置弹窗里按 `s` 会自动重启；手改文件后 `state-stop` 再 `state-start`。
-直接改 `config.toml` 里的三个托管块不算数，下次 `configure` 会写回去。
+直接改 `config.toml` 里的三个托管块不算数，下次 `configure`（或 `theme-sync`）会写回去。
 </details>
 
 <details>
@@ -312,9 +337,10 @@ herdr plugin uninstall hhdebb.herdr-radar
 ## 工作方式
 
 一个常驻守护进程，由 Herdr 的事件流唤醒，每帧从 `herdr agent list` 取快照，只把状态、
-分组、排序键写成侧边栏 token。无网络；Herdr 配置和自己的状态目录之外只读会话自己的记录（会话记录的尾巴，Kilo Code 则是它库里那一行），
-给比插件更老的面板补一个最后活跃时间。和所有 Herdr 插件一样以你的用户身份运行，Herdr
-不沙箱插件，在意的话装之前看一眼 `herdr-plugin.toml` 和 `bin/`。
+分组、排序键写成侧边栏 token。跑着的时候不会动你的东西：托管块归 `configure` 和 `theme-sync`
+两个动作，字体归 `install-font`。无网络；Herdr 配置和自己的状态目录之外只读会话自己的记录
+（会话记录的尾巴，Kilo Code 则是它库里那一行），给比插件更老的面板补一个最后活跃时间。和所有 Herdr
+插件一样以你的用户身份运行，Herdr 不沙箱插件，在意的话装之前看一眼 `herdr-plugin.toml` 和 `bin/`。
 
 ## 许可与致谢
 

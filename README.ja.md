@@ -43,8 +43,8 @@ herdr-radar はその情報をサイドバーに載せます。完了したセ�
 - **一覧に構造がある。** ワークスペースごとの見出し、git worktree はリポジトリの下にツリーで、
   分割した画面のペインは隣り合って並び、いちばん忙しいプロジェクトが先頭、
   Spaces 列も同じ色で塗られます。
-- **周辺も追従する。** タブバーに現在のディレクトリ、デスクトップのライト／ダークに合わせて
-  Herdr のテーマが切り替わり、設定ポップアップひとつで全オプションを扱えます。
+- **周辺も追従する。** タブバーに現在のディレクトリ、`theme-sync` アクションを実行したときに
+  デスクトップのライト／ダークで生成し直せるテーマブロック、そして全オプションを扱う設定ポップアップ。
 
 ## クイックスタート
 
@@ -52,10 +52,32 @@ herdr-radar はその情報をサイドバーに載せます。完了したセ�
 herdr plugin install hhdebb/herdr-radar
 ```
 
-インストールはこれだけです。初回起動時にプラグインが残りを自分で済ませます。Herdr の
-`config.toml` に 3 つの管理ブロックを書き（マーカーコメントで囲み、その外には触れない）、
-アイコンフォントをユーザーのフォントディレクトリに入れ（管理者権限不要）、Ghostty / kitty の
-設定があればコードポイントの割り当てを書き込みます。
+インストールはこれだけですが、あなたの設定には何も書き込みません。プラグインが自分で Herdr の
+`config.toml`、ターミナルの設定、フォントディレクトリを書き換えることはありません。書き込むのは
+次の 2 つのアクションで、必要なときに実行します（あとから直す・やり直すのも同じアクションです）：
+
+```sh
+herdr plugin action invoke hhdebb.herdr-radar.install-font   # アイコンフォントとコードポイント割り当て
+herdr plugin action invoke hhdebb.herdr-radar.configure      # Herdr の config.toml に管理ブロックを書く
+```
+
+この順番で実行してください。サイドバーのブロックは「見えているフォント」に合わせてグリフ表を
+書くので、`install-font` より先に `configure` を実行すると Unicode の行が書かれます。先に実行して
+しまった場合は、フォントを入れたあとにもう一度 `configure` を実行します。
+
+`configure` は `config.toml` に 3 つのブロックを書きます（マーカーコメントで囲み、その外には
+触れません）。`install-font` はフォントをユーザーのフォントディレクトリに入れ（管理者権限不要）、
+Ghostty / kitty の設定があればコードポイントの割り当てを書き込みます。任意の `theme-sync` は、
+デスクトップのライト／ダークを切り替えたときに、色を持つ 2 つのブロックを作り直します。
+
+設定を「生成」している場合（Nix、Home Manager、dotfiles リポジトリ）は、
+`node bin/configure.js --print` が同じブロックを 1 つの TOML ドキュメントとして出力します。
+何も書き込まず、Herdr のサーバーにもデスクトップにも問い合わせないので、Herdr が起動して
+いなくても使えます。`--variant` を渡さない場合、外観は生成先の設定にある `[theme] name` から、
+グリフ表はプラグイン自身の `variant` 設定から決まります。タブバーの項目だけは意図的に
+そのマシン固有で、このプラグインの状態ファイルを読むコマンドなので、ドキュメントには選択中の
+絶対パス（とプラットフォームに合った `cat` / `type`）が入ります。同じマシンで何度実行しても
+同じ内容ですが、マシン間でバイト単位に同じにはなりません。
 
 > [!IMPORTANT]
 > プラグインは Herdr サーバーが起動時に立ち上げます。インストール後にサイドバーが変わらなければ、
@@ -92,8 +114,8 @@ herdr plugin link ./herdr-radar
 herdr plugin action invoke hhdebb.herdr-radar.state-start
 ```
 
-`plugin link` はビルド手順を実行しません。同じセットアップはデーモンの初回起動が行うので、
-3 行目が必要です。
+`plugin link` はビルド手順を実行しません。3 行目はデーモンの起動で、管理ブロックとフォントを
+書くのは上の 2 つのアクション（必要なときに実行）です。
 
 ### エージェントに任せる
 
@@ -104,16 +126,23 @@ herdr plugin action invoke hhdebb.herdr-radar.state-start
 
 1. herdr plugin install hhdebb/herdr-radar
 2. herdr plugin action invoke hhdebb.herdr-radar.state-start
-3. 確認: `herdr plugin list` で hhdebb.herdr-radar が enabled になっていること、
+3. herdr plugin action invoke hhdebb.herdr-radar.install-font
+4. herdr plugin action invoke hhdebb.herdr-radar.configure
+5. 確認: `herdr plugin list` で hhdebb.herdr-radar が enabled になっていること、
    `herdr agent list` でエージェントが動いているペインに `sort_key` トークンが
    付いていること（これは状態によらず必ず書かれます。ロゴのトークン名は
    状態によって変わります）。
 
 `herdr server stop` は実行しないでください。Herdr のプロセスも終了させないで
 ください。すべてのペインのすべてのプログラムが終了します（あなたを動かして
-いるものも含みます）。再起動が必要な手順はひとつもありません。プラグインは
-初回起動時に自分で設定を書き、アイコンフォントは新しい端末ウィンドウが
-自動的に読み込みます。
+いるものも含みます）。再起動が必要な手順はひとつもありません。インストール
+自体は何も書き込みません。3 がアイコンフォントをユーザーのフォントディレクトリに
+入れ、4 が管理ブロックを Herdr の `config.toml` に書き、新しい端末ウィンドウが
+フォントを自動的に読み込みます。順番はこのままにしてください。サイドバーの
+ブロックは見えているフォントに合わせてグリフ表を書くので、フォントより先に
+`configure` を実行した場合は、フォントを入れたあとにもう一度実行します。
+設定を生成している場合（Nix、Home Manager、dotfiles）は 3 と 4 を飛ばし、
+`node bin/configure.js --print` でブロックを得てください。
 
 Herdr 0.9.0 以降と Node 18 以降が必要です。マークが四角で表示される場合は、
 その端末にコードポイントマップがありません。この件を含め
@@ -237,7 +266,7 @@ exec claude "$@"
 | `row_label` | `title` | 行の名前：`title` セッションのタイトル、`tab` タブ名、`both` 両方（旧 `show_tab = true`） |
 | `trim_group_prefix` | `true` | 見出しと同じ名前でタイトルが始まるとき、その部分を落とす |
 | `worktree_mark` | `U+F418` | worktree 見出しのマーク（Nerd Font が必要）。空で非表示 |
-| `follow_appearance` | `true` | デスクトップのライト／ダークに合わせて Herdr のテーマを切り替え |
+| `follow_appearance` | `true` | 有効なら `configure` / `theme-sync` を実行したときデスクトップのライト／ダークでテーマブロックを生成。無効なら `configure` は設定自身の `[theme] name` に従い、`theme-sync` は `--force` なしでは何もしない |
 | `colors.active_row_bg_light` | `#b9cdf2` | ライトテーマの選択行の背景。空ならテーマ自身の値 |
 | `colors.active_row_bg_dark` | `#414868` | ダークテーマの選択行の背景 |
 
@@ -277,9 +306,10 @@ Ghostty では割り当てが解決したかを答えられるのは `ghostty +s
 <summary><b>インストールしても何も変わらない</b></summary>
 
 デーモンが動いていません：`herdr plugin action invoke hhdebb.herdr-radar.state-start`。それでも
-だめならプラグインのログでそのコマンドの出力を読んでください。よくある原因は、Herdr から
-見える PATH に Node 18 以上がないこと、`config.toml` に管理ブロックを置く `[ui]` テーブルがないこと、
-あるいは `[theme.custom]` / `[ui.sidebar.*]` テーブルを手で書いていることです。同じテーブルを 2 回
+だめならプラグインのログでそのコマンドの出力を読んでください。よくある原因は、`configure` アクションをまだ実行していないこと（インストールは `config.toml` に
+何も書きません）、Herdr から見える PATH に Node 18 以上がないこと、`config.toml` に管理ブロックを
+置く `[ui]` テーブルがないこと、あるいは `[theme.custom]` / `[ui.sidebar.*]` テーブルを手で
+書いていることです。同じテーブルを 2 回
 宣言するとファイル全体が壊れるので、プラグインは書き込みを拒否します。自分のものをどけるか、
 そのままにして Herdr 本来のパネルを使ってください。
 </details>
@@ -289,7 +319,7 @@ Ghostty では割り当てが解決したかを答えられるのは `ghostty +s
 
 デーモンは起動時に設定を読みます。設定ポップアップの `s` は再起動します。手で編集したあとは
 `state-stop` の後に `state-start`。`config.toml` の 3 つの管理ブロックを直接編集しても、次の
-`configure` で書き戻されます。
+`configure`（または `theme-sync`）で書き戻されます。
 </details>
 
 <details>
@@ -343,8 +373,10 @@ herdr plugin uninstall hhdebb.herdr-radar
 
 常駐デーモンが 1 つ。Herdr のイベントストリームで起こされ、フレームごとに `herdr agent list` から
 スナップショットを取り、状態・グループ・ソートキーだけをサイドバーのトークンとして書きます。
-ネットワークは使いません。Herdr の設定と自身の状態ディレクトリ以外で読むのは、セッション自身の
-記録だけ（記録の末尾、Kilo Code ならそのストアの該当行）——プラグインより古いペインに最終アクティビティ時刻を与えるためです。他の Herdr
+動いている間、あなたの持ち物には何も書きません。管理ブロックは `configure` と `theme-sync` の
+アクション、フォントは `install-font` の仕事です。ネットワークは使いません。Herdr の設定と自身の
+状態ディレクトリ以外で読むのは、セッション自身の記録だけ（記録の末尾、Kilo Code ならそのストアの
+該当行）——プラグインより古いペインに最終アクティビティ時刻を与えるためです。他の Herdr
 プラグインと同じくあなたのユーザー権限で動き、Herdr はサンドボックス化しません。気になる場合は
 導入前に `herdr-plugin.toml` と `bin/` を読んでください。
 
