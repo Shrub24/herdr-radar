@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0 — 2026-10-03
+
+- **A Kilo Code session that predates the daemon gets its freshness back.**
+  The idle shades — just stopped, idle, stale — come from when a session
+  last worked, and a pane that was already open when the daemon started has
+  no stamp of its own. Claude and Codex panes recover one from their own
+  transcripts; Kilo keeps a SQLite store instead, so its session's own
+  `time_updated` row is read now. Read-only and only that row, on a Node
+  whose built-in `node:sqlite` truly opens read-only (22.12+, 23.2+ on the 23
+  line); on anything older the pane reads as plain idle, as before.
+  [#34](https://github.com/hhdebb/herdr-radar/pull/34) by @christophkroeppl.
+
 ## 1.3.21 — 2026-10-03
 
 - **Three more agents wear their own mark.** Kimchi (CAST AI's coding
