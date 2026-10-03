@@ -98,7 +98,7 @@ const cases = [
   // READMEs — the hand-mapping ranges. All three drifted after the 24th vendor.
   [
     'README.md',
-    `U+E1A0${EN_DASH}U+E1B9`,
+    `U+E1A0${EN_DASH}U+E1BA`,
     `U+E1A0${EN_DASH}U+E1B3`,
     'README: stale end of range (shipped v1.3.6–v1.3.7)',
   ],
@@ -106,27 +106,27 @@ const cases = [
   ['README.ja.md', `U+E1C0${EN_DASH}U+E1C5`, '', 'README ja: a range dropped from the prose'],
   [
     'README.md',
-    `U+E1A0${EN_DASH}U+E1B9`,
-    `U+E1A0${EN_DASH}U+E1B90`,
+    `U+E1A0${EN_DASH}U+E1BA`,
+    `U+E1A0${EN_DASH}U+E1BA0`,
     'README: fifth hex digit read as a stray character',
   ],
   [
     'README.md',
-    `U+E1A0${EN_DASH}U+E1B9`,
-    `U+E1A0${EN_DASH}U+E1B9 (was U+e1a0-U+e1b3)`,
+    `U+E1A0${EN_DASH}U+E1BA`,
+    `U+E1A0${EN_DASH}U+E1BA (was U+e1a0-U+e1b3)`,
     'README: lower-case copy of the stale range alongside',
   ],
   [
     'README.ja.md',
-    `U+E1A0${EN_DASH}U+E1B9`,
-    'U+E1A0-U+E1B9',
+    `U+E1A0${EN_DASH}U+E1BA`,
+    'U+E1A0-U+E1BA',
     'README ja: hyphen instead of en dash is the same range',
     false,
   ],
   [
     'README.ja.md',
-    `U+E1A0${EN_DASH}U+E1B9`,
-    `U+e1a0${EN_DASH}U+e1b9`,
+    `U+E1A0${EN_DASH}U+E1BA`,
+    `U+e1a0${EN_DASH}U+e1ba`,
     'README ja: lower-case hex is the same range',
     false,
   ],
@@ -175,7 +175,7 @@ const cases = [
   ],
   [
     'THIRD_PARTY_NOTICES.md',
-    '32 icon glyphs',
+    '33 icon glyphs',
     '31 icon glyphs',
     'vendors: the notices state a stale glyph count (shipped)',
   ],
@@ -183,19 +183,19 @@ const cases = [
   // its own way, so each needs its own case.
   [
     'README.md',
-    'Twenty-six vendors have a mark',
+    'Twenty-seven vendors have a mark',
     'Twenty-five vendors have a mark',
     'vendors: English README undercounts the roster (shipped v1.3.6–v1.3.10)',
   ],
   [
     'README.zh-CN.md',
-    '\u4e8c\u5341\u516d\u5bb6\u6709\u81ea\u5df1\u7684\u6807\u8bb0',
+    '\u4e8c\u5341\u4e03\u5bb6\u6709\u81ea\u5df1\u7684\u6807\u8bb0',
     '\u4e8c\u5341\u4e94\u5bb6\u6709\u81ea\u5df1\u7684\u6807\u8bb0',
     'vendors: Chinese README undercounts the roster (shipped)',
   ],
   [
     'README.ja.md',
-    '26 \u306e\u30d9\u30f3\u30c0\u30fc\u304c\u72ec\u81ea\u306e\u30de\u30fc\u30af',
+    '27 \u306e\u30d9\u30f3\u30c0\u30fc\u304c\u72ec\u81ea\u306e\u30de\u30fc\u30af',
     '25 \u306e\u30d9\u30f3\u30c0\u30fc\u304c\u72ec\u81ea\u306e\u30de\u30fc\u30af',
     'vendors: Japanese README undercounts the roster (shipped)',
   ],
